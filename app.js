@@ -12,6 +12,29 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 // Estado simple en memoria
 let userState = {};
 
+// =====================
+// FORMATEO DE NÚMEROS
+// Limpia y fuerza formato Argentina: 549XXXXXXXXXX
+// =====================
+function formatearNumero(numero) {
+  // 1. Eliminar todo lo que no sea dígito
+  numero = numero.replace(/\D/g, "");
+
+  // 2. Si viene con 54 pero sin el 9 intermedio → agregarlo
+  // Ejemplo: 541126625237 → 5491126625237
+  if (numero.startsWith("54") && !numero.startsWith("549")) {
+    numero = "549" + numero.slice(2);
+  }
+
+  // 3. Si viene sin código de país → agregar 549
+  // Ejemplo: 1126625237 → 5491126625237
+  if (numero.length === 10 && !numero.startsWith("54")) {
+    numero = "549" + numero;
+  }
+
+  return numero;
+}
+
 // Verificación webhook
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
@@ -31,10 +54,11 @@ app.post("/webhook", async (req, res) => {
 
     if (!msg) return res.sendStatus(200);
 
-    const from = msg.from;
+    // Formatear el número del cliente que escribe
+    const from = formatearNumero(msg.from);
     const text = msg.text?.body?.toLowerCase() || "";
 
-    console.log("Mensaje de:", from, text);
+    console.log(`Mensaje de: ${from} → "${text}"`);
 
     // Estado inicial
     if (!userState[from]) {
@@ -47,44 +71,57 @@ app.post("/webhook", async (req, res) => {
 
       case "inicio":
         await sendMessage(from,
-`Hola 👋 Bienvenido a TequeOnda
+`Hola 👋 Bienvenido a Teque Onda 🇻🇪
 
-¿Cómo quieres hacer tu pedido?
+¿Cómo querés hacer tu pedido?
 
 1️⃣ Hacerlo yo mismo (web)
-2️⃣ Que me ayudemos 🤖`);
+2️⃣ Que el bot me ayude 🤖`);
         state.step = "menu";
         break;
 
       case "menu":
         if (text.includes("1")) {
           await sendMessage(from,
-"Haz tu pedido aquí 👉 https://menu.fu.do/tequeonda");
+"¡Perfecto! Hacé tu pedido aquí 👉 https://menu.fu.do/tequeonda 🛒");
           state.step = "fin";
-        } else {
-          await sendMessage(from, "Perfecto 🙌 dime tu correo 📧");
+        } else if (text.includes("2")) {
+          await sendMessage(from,
+"Perfecto 🙌 Te ayudo con el pedido. Primero necesito algunos datos.\n\nIngresá tu correo electrónico 📧");
           state.step = "email";
+        } else {
+          await sendMessage(from,
+"Por favor respondé con *1* o *2* 😊");
         }
         break;
 
       case "email":
         state.email = text;
-        await sendMessage(from, "Ahora tu teléfono 📱");
+        await sendMessage(from, "Gracias ✅ Ahora tu número de teléfono 📱");
         state.step = "telefono";
         break;
 
       case "telefono":
         state.telefono = text;
         await sendMessage(from,
-"Forma de pago?\n\n1️⃣ Efectivo\n2️⃣ Transferencia");
+"¿Cómo vas a pagar?\n\n1️⃣ Efectivo\n2️⃣ Transferencia / Mercado Pago");
         state.step = "pago";
         break;
 
       case "pago":
-        state.pago = text;
+        state.pago = text.includes("1") ? "Efectivo" : "Transferencia / Mercado Pago";
 
         await sendMessage(from,
-"Perfecto 🔥 ¿Qué deseas pedir?\n(Ej: 2 cajas de tequeños + 1 bebida)");
+`Nuestros más pedidos 🔥
+
+🧀 12 Tequeños de Queso
+🎉 25 Tequeños Fiesteros
+👨‍👩‍👧 Promo Familiar (20 piezas)
+🥟 Mini Empanadas x6
+🍰 Torta Tres Leches
+
+¿Qué querés pedir? Escribilo así:
+*Ej: 2 packs de 12 tequeños + 1 porción torta tres leches*`);
 
         state.step = "pedido";
         break;
@@ -93,63 +130,122 @@ app.post("/webhook", async (req, res) => {
         state.pedido = text;
 
         await sendMessage(from,
-"¿Deseas envío a domicilio? (si/no)");
+"¿Querés agregar bebidas o postres? 🥤🍰\n\nEscribí *no* si no querés agregar nada.");
+        state.step = "extras";
+        break;
+
+      case "extras":
+        state.extras = text.includes("no") ? "Sin extras" : text;
+
+        await sendMessage(from,
+"¿El pedido es para cuántas personas? 👥\n\nEscribí un número. Ej: *4*");
+        state.step = "personas";
+        break;
+
+      case "personas":
+        state.personas = text;
+
+        await sendMessage(from,
+"¿Querés envío a domicilio o retirás en el local?\n\n1️⃣ Envío a domicilio\n2️⃣ Retiro en el local (Bonpland 1708, Palermo)");
         state.step = "envio";
         break;
 
       case "envio":
-        state.envio = text;
+        state.envio = text.includes("1") ? "Delivery a domicilio" : "Retiro en local";
 
-        // Enviar pedido al local
-        await sendMessage(process.env.LOCAL_NUMBER,
-`🔥 NUEVO PEDIDO 🔥
+        if (text.includes("1")) {
+          await sendMessage(from,
+"📍 Perfecto. Ingresá tu dirección de entrega completa:\n*Ej: Av. Corrientes 1234, Piso 3, CABA*");
+          state.step = "direccion";
+        } else {
+          await confirmarYEnviarPedido(from, state);
+        }
+        break;
 
-Cliente: ${from}
-Email: ${state.email}
-Teléfono: ${state.telefono}
-Pago: ${state.pago}
-
-Pedido:
-${state.pedido}
-
-Envío: ${state.envio}`);
-
-        await sendMessage(from,
-"✅ Pedido recibido!\nEn breve lo confirmamos 🙌");
-
-        state.step = "fin";
+      case "direccion":
+        state.direccion = text;
+        await confirmarYEnviarPedido(from, state);
         break;
 
       default:
         await sendMessage(from,
-"Si quieres hacer otro pedido escribe *hola* 🙌");
+"Si querés hacer otro pedido escribí *hola* 🙌");
         userState[from] = { step: "inicio" };
     }
 
     res.sendStatus(200);
 
   } catch (error) {
-    console.error(error.response?.data || error.message);
+    console.error("❌ Error:", error.response?.data || error.message);
     res.sendStatus(500);
   }
 });
 
-// Enviar mensaje
-async function sendMessage(to, text) {
-  await axios.post(
-    `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
-    {
-      messaging_product: "whatsapp",
-      to,
-      text: { body: text }
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json"
-      }
-    }
-  );
+// =====================
+// CONFIRMAR Y ENVIAR PEDIDO AL LOCAL
+// =====================
+async function confirmarYEnviarPedido(from, state) {
+  // Resumen al cliente
+  await sendMessage(from,
+`✅ *Resumen de tu pedido:*
+
+🛒 Pedido: ${state.pedido}
+➕ Extras: ${state.extras}
+👥 Personas: ${state.personas}
+💳 Pago: ${state.pago}
+🚚 Entrega: ${state.envio}
+${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
+
+En breve te confirmamos el pedido. ¡Gracias por elegirnos! 🇻🇪🧀`);
+
+  // Formatear LOCAL_NUMBER correctamente
+  const localNum = formatearNumero(process.env.LOCAL_NUMBER);
+
+  // Enviar resumen al local
+  await sendMessage(localNum,
+`🔥 *NUEVO PEDIDO BOT* 🔥
+
+📱 Cliente: ${from}
+📧 Email: ${state.email}
+📞 Teléfono: ${state.telefono}
+💳 Pago: ${state.pago}
+
+🛒 Pedido: ${state.pedido}
+➕ Extras: ${state.extras}
+👥 Personas: ${state.personas}
+🚚 Entrega: ${state.envio}
+${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
+
+⏰ ${new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`);
+
+  state.step = "fin";
 }
 
-app.listen(3000, () => console.log("🚀 Bot corriendo en puerto 3000"));
+// =====================
+// ENVIAR MENSAJE WHATSAPP
+// =====================
+async function sendMessage(to, text) {
+  try {
+    const response = await axios.post(
+      `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to,
+        text: { body: text }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+    console.log(`✅ Mensaje enviado a ${to}`);
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error enviando a ${to}:`, error.response?.data || error.message);
+    throw error;
+  }
+}
+
+app.listen(3000, () => console.log("🚀 Bot Teque Onda corriendo en puerto 3000"));
