@@ -72,7 +72,16 @@ app.post("/webhook", async (req, res) => {
           state.step = "fin";
         } else if (text.includes("2")) {
           await sendMessage(from,
-            "¡Genial! 🤖 Para empezar, ¿cuál es tu nombre? 👤");
+`¡Genial! 🤖 Voy a ayudarte a armar tu pedido paso a paso.
+
+Para poder crearlo por vos, voy a necesitarte algunos datos:
+📝 Nombre
+📧 Correo electrónico
+📱 Teléfono de contacto
+💳 Forma de pago
+🛒 Lo que querés pedir
+
+¡Empecemos! ¿Cuál es tu nombre? 👤`);
           state.step = "nombre";
         } else {
           await sendMessage(from,
