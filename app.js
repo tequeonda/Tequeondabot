@@ -153,7 +153,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
       case "pedido":
         state.pedido = msg.text?.body || text;
         await sendMessage(from,
-          "¿Querés agregar algo más? 🥤🍰\n\nEscribí *no* si no querés nada más.");
+          "¿Querés agregar algo más, Cocas, Maltas, Rekobebidas, Torta 3 Leches? 🥤🍰\n\nEscribí *no* si no querés nada más.");
         state.step = "extras";
         break;
 
