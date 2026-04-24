@@ -14,6 +14,7 @@ let userState = {};
 
 // =====================
 // FORMATEO DE NÚMEROS
+// Quita el 9 para números argentinos (formato que usa Meta API)
 // =====================
 function formatearNumero(numero) {
   numero = numero.replace(/\D/g, "");
@@ -21,6 +22,14 @@ function formatearNumero(numero) {
     numero = "54" + numero.slice(3);
   }
   return numero;
+}
+
+// =====================
+// FORMATEO NÚMERO LOCAL
+// El LOCAL_NUMBER se usa tal cual está en Render, sin quitar el 9
+// =====================
+function formatearNumeroLocal(numero) {
+  return numero.replace(/\D/g, "");
 }
 
 // Verificación webhook
@@ -127,7 +136,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
    ↳ Elegís 4 salados: carne mechada, carne molida o pollo
    ↳ Elegís 2 con queso: queso, papa y queso, jamón y queso o pizza
 
-*— PROMOS CLÁSICAS —*
+*— PROMAS CLÁSICAS —*
 🧀 6 Tequeños de Queso
 🧀 12 Tequeños de Queso
 🧀 24 Tequeños de Queso
@@ -153,7 +162,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
       case "pedido":
         state.pedido = msg.text?.body || text;
         await sendMessage(from,
-          "¿Querés agregar algo más, Cocas, Maltas, Rekobebidas, Torta 3 Leches? 🥤🍰\n\nEscribí *no* si no querés nada más.");
+          "¿Querés agregar algo más? 🥤🍰\n\nEscribí *no* si no querés nada más.");
         state.step = "extras";
         break;
 
@@ -210,9 +219,10 @@ ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
 
 ¡En breve te confirmamos y cotizamos el envío si corresponde! Gracias por elegirnos 🇻🇪🧀`);
 
-  // Notificar al local
+  // Notificar al local — usar número tal cual está en Render, sin quitar el 9
   try {
-    const localNum = formatearNumero(process.env.LOCAL_NUMBER);
+    const localNum = formatearNumeroLocal(process.env.LOCAL_NUMBER);
+    console.log(`📲 Enviando pedido al local: ${localNum}`);
     await sendMessage(localNum,
 `🔥 *NUEVO PEDIDO BOT* 🔥
 
