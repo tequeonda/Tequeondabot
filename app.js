@@ -55,8 +55,29 @@ app.post("/webhook", async (req, res) => {
     switch (state.step) {
 
       case "inicio":
-        await sendTemplate(from);
-        state.step = "nombre";
+        await sendMessage(from,
+`👋 ¡Bienvenido a Teque Onda! 🇻🇪🧀
+
+¿Cómo querés hacer tu pedido?
+
+1️⃣ Hacerlo yo mismo (web)
+2️⃣ Que el bot me ayude 🤖`);
+        state.step = "menu_inicial";
+        break;
+
+      case "menu_inicial":
+        if (text.includes("1")) {
+          await sendMessage(from,
+            "Hacé tu pedido aquí 👉 https://menu.fu.do/tequeonda 🛒");
+          state.step = "fin";
+        } else if (text.includes("2")) {
+          await sendMessage(from,
+            "¡Genial! 🤖 Para empezar, ¿cuál es tu nombre? 👤");
+          state.step = "nombre";
+        } else {
+          await sendMessage(from,
+            "Por favor respondé con *1* o *2* 😊");
+        }
         break;
 
       case "nombre":
@@ -180,7 +201,7 @@ ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
 
 ¡En breve te confirmamos y cotizamos el envío si corresponde! Gracias por elegirnos 🇻🇪🧀`);
 
-  // Notificar al local (no crítico — si falla no interrumpe al cliente)
+  // Notificar al local
   try {
     const localNum = formatearNumero(process.env.LOCAL_NUMBER);
     await sendMessage(localNum,
@@ -203,46 +224,6 @@ ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
   }
 
   state.step = "fin";
-}
-
-// =====================
-// ENVIAR PLANTILLA hello_world
-// =====================
-async function sendTemplate(to) {
-  try {
-    const response = await axios.post(
-      `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to,
-        type: "template",
-        template: {
-          name: "hello_world",
-          language: { code: "en_US" }
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${TOKEN}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
-    console.log(`✅ Plantilla enviada a ${to}`);
-
-    await sendMessage(to,
-`Hola 👋 Bienvenido a Teque Onda 🇻🇪
-
-¿Cómo querés hacer tu pedido?
-
-1️⃣ Hacerlo yo mismo (web)
-2️⃣ Que el bot me ayude 🤖`);
-
-    return response.data;
-  } catch (error) {
-    console.error(`❌ Error enviando plantilla a ${to}:`, error.response?.data || error.message);
-    throw error;
-  }
 }
 
 // =====================
