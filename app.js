@@ -57,9 +57,7 @@ app.post("/webhook", async (req, res) => {
     switch (state.step) {
 
       case "inicio":
-        // Primer mensaje: plantilla hello_world (funciona sin verificación)
-        // await sendTemplate(from);  ❌ COMENTADA
-        await sendMessage(from, "Hola 👋 Bienvenido a TequeOnda");
+        await sendTemplate(from); // ✅ activada
         state.step = "menu";
         break;
 
