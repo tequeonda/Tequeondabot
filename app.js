@@ -13,8 +13,19 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 let userState = {};
 
 // =====================
+// BARRIOS CON COBERTURA
+// =====================
+const BARRIOS_CON_COBERTURA = [
+  "palermo", "villa crespo", "chacarita", "colegiales", "villa del parque"
+];
+
+function tieneCobertura(barrio) {
+  const b = barrio.toLowerCase().trim();
+  return BARRIOS_CON_COBERTURA.some(zona => b.includes(zona));
+}
+
+// =====================
 // FORMATEO DE NÚMEROS
-// Quita el 9 para números argentinos (formato que usa Meta API)
 // =====================
 function formatearNumero(numero) {
   numero = numero.replace(/\D/g, "");
@@ -24,10 +35,6 @@ function formatearNumero(numero) {
   return numero;
 }
 
-// =====================
-// FORMATEO NÚMERO LOCAL
-// El LOCAL_NUMBER se usa tal cual está en Render, sin quitar el 9
-// =====================
 function formatearNumeroLocal(numero) {
   return numero.replace(/\D/g, "");
 }
@@ -67,19 +74,35 @@ app.post("/webhook", async (req, res) => {
         await sendMessage(from,
 `👋 ¡Bienvenido a Teque Onda! 🇻🇪🧀
 
-¿Cómo querés hacer tu pedido?
+¿Cómo querés recibir tu pedido?
 
-1️⃣ Hacerlo yo mismo (web)
-2️⃣ Que el bot me ayude 🤖`);
+1️⃣ Mercado Pago Delivery 🟡
+2️⃣ Rappi 🟠
+3️⃣ Nuestra web Fu.do 🌐 (preferida, con descuentos 🎁)
+4️⃣ Que el bot me ayude 🤖`);
         state.step = "menu_inicial";
         break;
 
       case "menu_inicial":
         if (text.includes("1")) {
+          state.canal = "mercadopago";
           await sendMessage(from,
-            "Hacé tu pedido aquí 👉 https://menu.fu.do/tequeonda 🛒");
-          state.step = "fin";
+            "¿En qué barrio estás? 📍\n\nEscribilo así: *Ej: Palermo, Villa Crespo, Chacarita...*");
+          state.step = "cobertura";
         } else if (text.includes("2")) {
+          state.canal = "rappi";
+          await sendMessage(from,
+            "¿En qué barrio estás? 📍\n\nEscribilo así: *Ej: Palermo, Villa Crespo, Chacarita...*");
+          state.step = "cobertura";
+        } else if (text.includes("3")) {
+          await sendMessage(from,
+`¡Genial! 🎁 En nuestra web encontrás descuentos exclusivos para clientes cercanos.
+
+Hacé tu pedido aquí 👉 https://menu.fu.do/tequeonda 🌐
+
+¡Gracias por elegirnos! 🇻🇪🧀`);
+          state.step = "fin";
+        } else if (text.includes("4")) {
           await sendMessage(from,
 `¡Genial! 🤖 Voy a ayudarte a armar tu pedido paso a paso.
 
@@ -94,7 +117,68 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
           state.step = "nombre";
         } else {
           await sendMessage(from,
-            "Por favor respondé con *1* o *2* 😊");
+            "Por favor respondé con *1*, *2*, *3* o *4* 😊");
+        }
+        break;
+
+      case "cobertura":
+        const barrio = msg.text?.body || text;
+        if (tieneCobertura(barrio)) {
+          if (state.canal === "mercadopago") {
+            await sendMessage(from,
+`✅ ¡Genial, llegamos a tu barrio!
+
+Hacé tu pedido por Mercado Pago Delivery aquí 👉 https://mpago.li/2Vcwjkc 🟡
+
+¡Gracias por elegirnos! 🇻🇪🧀`);
+          } else {
+            await sendMessage(from,
+`✅ ¡Genial, llegamos a tu barrio!
+
+Hacé tu pedido por Rappi aquí 👉 https://rappi.onelink.me/y6GB/30kk2ddt 🟠
+
+¡Gracias por elegirnos! 🇻🇪🧀`);
+          }
+          state.step = "fin";
+        } else {
+          await sendMessage(from,
+`😕 Lo sentimos, por el momento no llegamos a *${msg.text?.body || barrio}*.
+
+Pero no te quedés sin tus tequeños 🧀 Podés:
+
+3️⃣ Pedir por nuestra web Fu.do 🌐 (con descuentos)
+👉 https://menu.fu.do/tequeonda
+
+4️⃣ Que el bot te ayude con el pedido 🤖
+
+Respondé *3* o *4* para continuar.`);
+          state.step = "menu_sin_cobertura";
+        }
+        break;
+
+      case "menu_sin_cobertura":
+        if (text.includes("3")) {
+          await sendMessage(from,
+`¡Genial! 🎁 Hacé tu pedido aquí 👉 https://menu.fu.do/tequeonda 🌐
+
+¡Gracias por elegirnos! 🇻🇪🧀`);
+          state.step = "fin";
+        } else if (text.includes("4")) {
+          await sendMessage(from,
+`¡Genial! 🤖 Voy a ayudarte a armar tu pedido paso a paso.
+
+Para poder crearlo por vos, voy a necesitarte algunos datos:
+📝 Nombre
+📧 Correo electrónico
+📱 Teléfono de contacto
+💳 Forma de pago
+🛒 Lo que querés pedir
+
+¡Empecemos! ¿Cuál es tu nombre? 👤`);
+          state.step = "nombre";
+        } else {
+          await sendMessage(from,
+            "Por favor respondé con *3* o *4* 😊");
         }
         break;
 
@@ -136,7 +220,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
    ↳ Elegís 4 salados: carne mechada, carne molida o pollo
    ↳ Elegís 2 con queso: queso, papa y queso, jamón y queso o pizza
 
-*— PROMAS CLÁSICAS —*
+*— PROMOS CLÁSICAS —*
 🧀 6 Tequeños de Queso
 🧀 12 Tequeños de Queso
 🧀 24 Tequeños de Queso
@@ -162,7 +246,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
       case "pedido":
         state.pedido = msg.text?.body || text;
         await sendMessage(from,
-          "¿Querés agregar algo más, Cocas, Maltas, RekoBebidas, Torta 3 Leches? 🥤🍰\n\nEscribí *no* si no querés nada más.");
+          "¿Querés agregar algo más? 🥤🍰\n\nEscribí *no* si no querés nada más.");
         state.step = "extras";
         break;
 
@@ -219,7 +303,6 @@ ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
 
 ¡En breve te confirmamos y cotizamos el envío si corresponde! Gracias por elegirnos 🇻🇪🧀`);
 
-  // Notificar al local — usar número tal cual está en Render, sin quitar el 9
   try {
     const localNum = formatearNumeroLocal(process.env.LOCAL_NUMBER);
     console.log(`📲 Enviando pedido al local: ${localNum}`);
