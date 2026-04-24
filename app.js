@@ -17,11 +17,10 @@ let userState = {};
 // =====================
 function formatearNumero(numero) {
   numero = numero.replace(/\D/g, "");
-  if (numero.startsWith("54") && !numero.startsWith("549")) {
-    numero = "549" + numero.slice(2);
-  }
-  if (numero.length === 10 && !numero.startsWith("54")) {
-    numero = "549" + numero;
+  // Meta usa formato SIN el 9 para Argentina: 54 + 11 + XXXXXXXX
+  // Si viene con 549 (formato celular argentino), quitamos el 9
+  if (numero.startsWith("549")) {
+    numero = "54" + numero.slice(3);
   }
   return numero;
 }
