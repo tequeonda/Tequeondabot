@@ -9,8 +9,58 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
-// Estado simple en memoria
-let userState = {};
+// =====================
+// HORARIOS DE ATENCIÓN
+// =====================
+function estaAbierto() {
+  const ahora = new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" });
+  const fecha = new Date(ahora);
+  const hora = fecha.getHours();
+  const minutos = fecha.getMinutes();
+  const horaDecimal = hora + minutos / 60;
+  // Abierto de 10:30 a 23:00
+  return horaDecimal >= 10.5 && horaDecimal < 23;
+}
+
+// =====================
+// PRECIOS
+// =====================
+const PRECIOS = [
+  { keywords: ["50 tequeños", "50 fiesteros", "promo 50"], precio: 28500 },
+  { keywords: ["25 tequeños", "25 fiesteros", "promo 25"], precio: 16500 },
+  { keywords: ["24 tequeños", "promo 24 teque"], precio: 27500 },
+  { keywords: ["12 tequeños", "promo 12 teque"], precio: 15000 },
+  { keywords: ["6 tequeños", "promo 6 teque"], precio: 7500 },
+  { keywords: ["mix 24"], precio: 34900 },
+  { keywords: ["mix 12"], precio: 19500 },
+  { keywords: ["mix 5"], precio: 12800 },
+  { keywords: ["12 mini empanadas", "promo 12 mini"], precio: 26500 },
+  { keywords: ["6 mini empanadas", "promo 6 mini"], precio: 14500 },
+  { keywords: ["promo 6 pastelitos", "6 pastelitos"], precio: 14500 },
+  { keywords: ["promo 4 pastelitos", "4 pastelitos"], precio: 8500 },
+  { keywords: ["empanada pabellon", "empanada de pabellon", "empanada pabellón"], precio: 5500 },
+  { keywords: ["torta tres leches", "torta 3 leches"], precio: 5000 },
+  { keywords: ["tequeyoyo", "teque yoyo"], precio: 3000 },
+];
+
+function calcularTotal(pedido) {
+  const texto = pedido.toLowerCase();
+  let total = 0;
+
+  for (const item of PRECIOS) {
+    for (const kw of item.keywords) {
+      if (texto.includes(kw)) {
+        const regex = new RegExp(`(\\d+)\\s*${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+        const match = texto.match(regex);
+        const cantidad = match ? parseInt(match[1]) : 1;
+        total += item.precio * cantidad;
+        break;
+      }
+    }
+  }
+
+  return total;
+}
 
 // =====================
 // BARRIOS CON COBERTURA
@@ -39,6 +89,9 @@ function formatearNumeroLocal(numero) {
   return numero.replace(/\D/g, "");
 }
 
+// Estado simple en memoria
+let userState = {};
+
 // Verificación webhook
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
@@ -62,6 +115,14 @@ app.post("/webhook", async (req, res) => {
 
     console.log(`RAW: ${fromRaw} | FORMATEADO: ${from} → "${text}"`);
 
+    // Comando cancelar en cualquier momento
+    if (text === "cancelar" || text === "cancel") {
+      userState[from] = { step: "inicio" };
+      await sendMessage(from,
+        "✅ Pedido cancelado. Escribí *hola* cuando quieras empezar de nuevo 😊");
+      return res.sendStatus(200);
+    }
+
     if (!userState[from]) {
       userState[from] = { step: "inicio" };
     }
@@ -71,6 +132,16 @@ app.post("/webhook", async (req, res) => {
     switch (state.step) {
 
       case "inicio":
+        if (!estaAbierto()) {
+          await sendMessage(from,
+`😔 En este momento estamos cerrados.
+
+⏰ Nuestro horario de atención es:
+*Lunes a Domingo de 10:30 a 23:00 hs*
+
+¡Escribinos cuando abramos y con gusto te atendemos! 🇻🇪🧀`);
+          return res.sendStatus(200);
+        }
         await sendMessage(from,
 `👋 ¡Bienvenido a Teque Onda! 🇻🇪🧀
 
@@ -79,7 +150,9 @@ app.post("/webhook", async (req, res) => {
 1️⃣ Mercado Pago Delivery 🟡
 2️⃣ Rappi 🟠
 3️⃣ Nuestra web Fu.do 🌐 (⭐Favorito Ahorro 💰✨)
-4️⃣ Que el bot me ayude 🤖`);
+4️⃣ Que el bot me ayude 🤖
+
+_En cualquier momento escribí *cancelar* para empezar de nuevo._`);
         state.step = "menu_inicial";
         break;
 
@@ -146,7 +219,7 @@ Hacé tu pedido por Rappi aquí 👉 https://rappi.onelink.me/y6GB/30kk2ddt 🟠
 
 Pero no te quedés sin tus tequeños 🧀 Podés:
 
-3️⃣ Pedir por nuestra web Fu.do 🌐 (con descuentos💰✨)
+3️⃣ Pedir por nuestra web Fu.do 🌐 (con descuentos 💰✨)
 👉 https://menu.fu.do/tequeonda
 
 4️⃣ Que el Bot te ayude con el Pedido 🤖
@@ -208,32 +281,35 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
 `Nuestros productos 🔥
 
 *— INDIVIDUALES —*
-🥟 Empanada Grande de Pabellón (250g)
-🧀 Tequeyoyo x unidad
+🥟 Empanada Grande de Pabellón (250g) — $5.500
+🧀 Tequeyoyo x unidad — $3.000
 
 *— PROMOS CHICAS —*
-🎉 Mix 5 (3 empanadas + 2 pastelitos + gaseosa)
-🥟 Promo 4 Pastelitos + 1 Bebida
+🎉 Mix 5 (3 empanadas + 2 pastelitos + gaseosa) — $12.800
+🥟 Promo 4 Pastelitos + 1 Bebida — $8.500
    ↳ Elegís 2 salados: carne mechada, carne molida o pollo
    ↳ Elegís 2 con queso: queso, papa y queso, jamón y queso o pizza
-🥟 Promo 6 Pastelitos + 2 Bebidas
+🥟 Promo 6 Pastelitos + 2 Bebidas — $14.500
    ↳ Elegís 4 salados: carne mechada, carne molida o pollo
    ↳ Elegís 2 con queso: queso, papa y queso, jamón y queso o pizza
 
 *— PROMOS CLÁSICAS —*
-🧀 6 Tequeños de Queso
-🧀 12 Tequeños de Queso
-🧀 24 Tequeños de Queso
-🎉 25 Tequeños Fiesteros
-🎉 50 Tequeños Fiesteros
+🧀 6 Tequeños de Queso — $7.500
+🧀 12 Tequeños de Queso — $15.000
+🧀 24 Tequeños de Queso — $27.500
+🎉 25 Tequeños Fiesteros — $16.500
+🎉 50 Tequeños Fiesteros — $28.500
 
 *— MIX —*
-🎊 Mix 12 (6 tequeños + 6 empanadas surtidas) — ideal 2 a 3 personas
-🎊 Mix 24 (12 tequeños + 12 empanadas surtidas) — ideal 4 a 5 personas
+🎊 Mix 12 (6 tequeños + 6 empanadas) — $19.500 — ideal 2 a 3 personas
+🎊 Mix 24 (12 tequeños + 12 empanadas) — $34.900 — ideal 4 a 5 personas
 
 *— EMPANADAS —*
-🥟 6 Mini Empanadas Surtidas
-🥟 12 Mini Empanadas Surtidas
+🥟 6 Mini Empanadas Surtidas — $14.500
+🥟 12 Mini Empanadas Surtidas — $26.500
+
+*— POSTRES —*
+🍰 Torta Tres Leches — $5.000
 
 ¿Qué querés pedir? Escribilo así:
 *Ej: 1 Mix 12 + 1 Promo 4 Pastelitos (2 carne mechada, 2 de queso)*`);
@@ -243,7 +319,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
       case "pedido":
         state.pedido = msg.text?.body || text;
         await sendMessage(from,
-          "¿Querés agregar algo más? Tenemos Maltas, Cocas, RekoBebibas, Nestea y Tortas 3 Leches 🥤🍰\n\nEscribí *no* si no querés nada más.");
+          "¿Querés agregar algo más? Tenemos Maltas, Cocas, RekoBebidas, Nestea y Torta Tres Leches 🥤🍰\n\nEscribí *no* si no querés nada más.");
         state.step = "extras";
         break;
 
@@ -288,6 +364,13 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
 // CONFIRMAR Y ENVIAR PEDIDO AL LOCAL
 // =====================
 async function confirmarYEnviarPedido(from, state) {
+  const pedidoCompleto = `${state.pedido} ${state.extras}`;
+  const total = calcularTotal(pedidoCompleto);
+
+  const totalTexto = total > 0
+    ? `\n💰 *Total aprox:* $${total.toLocaleString("es-AR")}\n_(No incluye costo de envío. El total final se confirma con el pedido)_`
+    : "";
+
   await sendMessage(from,
 `✅ *Resumen de tu pedido:*
 
@@ -297,6 +380,7 @@ async function confirmarYEnviarPedido(from, state) {
 💳 Pago: ${state.pago}
 🚚 Entrega: ${state.envio}
 ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
+${totalTexto}
 
 ¡En breve te confirmamos y cotizamos el envío si corresponde! Gracias por elegirnos 🇻🇪🧀`);
 
@@ -316,6 +400,7 @@ ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
 ➕ Extras: ${state.extras}
 🚚 Entrega: ${state.envio}
 ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
+💰 Total aprox: $${total.toLocaleString("es-AR")}
 
 ⏰ ${new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`);
   } catch (e) {
