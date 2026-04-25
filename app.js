@@ -18,18 +18,14 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 function estaAbierto() {
   const ahora = new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" });
   const fecha = new Date(ahora);
-  const dia = fecha.getDay(); // 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
+  const dia = fecha.getDay();
   const hora = fecha.getHours();
   const minutos = fecha.getMinutes();
   const horaDecimal = hora + minutos / 60;
 
-  if (dia >= 1 && dia <= 3) {
-    return horaDecimal >= 11 && horaDecimal < 23;
-  } else if (dia >= 4 && dia <= 6) {
-    return horaDecimal >= 11 && horaDecimal < 24;
-  } else if (dia === 0) {
-    return horaDecimal >= 15 && horaDecimal < 23;
-  }
+  if (dia >= 1 && dia <= 3) return horaDecimal >= 11 && horaDecimal < 23;
+  else if (dia >= 4 && dia <= 6) return horaDecimal >= 11 && horaDecimal < 24;
+  else if (dia === 0) return horaDecimal >= 15 && horaDecimal < 23;
   return false;
 }
 
@@ -41,7 +37,7 @@ function horarioTexto() {
 }
 
 // =====================
-// PRECIOS
+// PRECIOS PRODUCTOS
 // =====================
 const PRECIOS = [
   { keywords: ["50 tequeños", "50 fiesteros", "promo 50"], precio: 28500 },
@@ -61,18 +57,50 @@ const PRECIOS = [
   { keywords: ["tequeyoyo", "teque yoyo"], precio: 3000 },
 ];
 
-function calcularTotal(pedido) {
-  const texto = pedido.toLowerCase();
+// =====================
+// PRECIOS EXTRAS / BEBIDAS
+// =====================
+const PRECIOS_EXTRAS = [
+  { keywords: ["malta"], precio: 3500 },
+  { keywords: ["coca", "coca-cola", "cocacola"], precio: 2500 },
+  { keywords: ["reko", "rekobebida", "rekopiña", "rekolita", "reko uva", "reko manzana", "reko tea"], precio: 2500 },
+  { keywords: ["nestea", "te vnesti", "vnesti"], precio: 2500 },
+  { keywords: ["sprite", "fanta", "pepsi", "seven up", "7up"], precio: 2500 },
+  { keywords: ["agua"], precio: 1500 },
+  { keywords: ["gatorade"], precio: 2000 },
+  { keywords: ["monster"], precio: 4000 },
+  { keywords: ["torta tres leches", "torta 3 leches"], precio: 5000 },
+];
+
+function calcularTotal(pedido, extras) {
   let total = 0;
 
+  // Calcular productos del pedido principal
+  const textoPedido = pedido.toLowerCase();
   for (const item of PRECIOS) {
     for (const kw of item.keywords) {
-      if (texto.includes(kw)) {
+      if (textoPedido.includes(kw)) {
         const regex = new RegExp(`(\\d+)\\s*${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-        const match = texto.match(regex);
+        const match = textoPedido.match(regex);
         const cantidad = match ? parseInt(match[1]) : 1;
         total += item.precio * cantidad;
         break;
+      }
+    }
+  }
+
+  // Calcular extras si los hay
+  if (extras && extras !== "Sin extras") {
+    const textoExtras = extras.toLowerCase();
+    for (const item of PRECIOS_EXTRAS) {
+      for (const kw of item.keywords) {
+        if (textoExtras.includes(kw)) {
+          const regex = new RegExp(`(\\d+)\\s*${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+          const match = textoExtras.match(regex);
+          const cantidad = match ? parseInt(match[1]) : 1;
+          total += item.precio * cantidad;
+          break;
+        }
       }
     }
   }
@@ -201,8 +229,7 @@ ${horarioTexto()}
 ¡Hasta pronto! 🇻🇪🧀`);
           state.step = "fin";
         } else {
-          await sendMessage(from,
-            "Por favor respondé con *1* o *2* 😊");
+          await sendMessage(from, "Por favor respondé con *1* o *2* 😊");
         }
         break;
 
@@ -300,8 +327,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
 ¡Empecemos! ¿Cuál es tu nombre? 👤`);
           state.step = "nombre";
         } else {
-          await sendMessage(from,
-            "Por favor respondé con *3* o *4* 😊");
+          await sendMessage(from, "Por favor respondé con *3* o *4* 😊");
         }
         break;
 
@@ -369,7 +395,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
       case "pedido":
         state.pedido = msg.text?.body || text;
         await sendMessage(from,
-          "¿Querés agregar algo más? Tenemos Maltas, Cocas, RekoBebidas, Nestea y Torta Tres Leches 🥤🍰\n\nEscribí *no* si no querés nada más.");
+          "¿Querés agregar algo más? Tenemos Maltas ($3.500), Cocas y RekoBebidas ($2.500), Nestea ($2.500) y Torta Tres Leches ($5.000) 🥤🍰\n\nEscribí *no* si no querés nada más.");
         state.step = "extras";
         break;
 
@@ -414,15 +440,14 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
 // CONFIRMAR Y ENVIAR PEDIDO AL LOCAL
 // =====================
 async function confirmarYEnviarPedido(from, state) {
-  const pedidoCompleto = `${state.pedido} ${state.extras}`;
-  const total = calcularTotal(pedidoCompleto);
+  const total = calcularTotal(state.pedido, state.extras);
 
   const totalTexto = total > 0
-    ? `\n💰 *Total aprox:* $${total.toLocaleString("es-AR")}\n_(No incluye costo de envío. El total final se confirma con el pedido)_`
+    ? `\n💰 *Total aprox:* $${total.toLocaleString("es-AR")}\n_(Incluye productos y bebidas seleccionadas. No incluye costo de envío. El total final se confirma con tu pedido)_`
     : "";
 
   const programadoTexto = state.pedidoProgramado
-    ? "\n🕐 *Pedido programado — se procesa cuando abramos*"
+    ? "\n🕐 *Pedido programado — se procesa cuando abramos*\n"
     : "";
 
   await sendMessage(from,
@@ -437,8 +462,8 @@ ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
 ${totalTexto}
 
 ${state.pedidoProgramado
-  ? "¡Tu pedido quedó registrado! Te confirmamos cuando abramos 🕐🇻🇪🧀"
-  : "¡En breve te confirmamos y cotizamos el envío si corresponde! Gracias por elegirnos 🇻🇪🧀"}`);
+    ? "¡Tu pedido quedó registrado! Te confirmamos cuando abramos 🕐🇻🇪🧀"
+    : "¡En breve te confirmamos y cotizamos el envío si corresponde! Gracias por elegirnos 🇻🇪🧀"}`);
 
   try {
     const localNum = formatearNumeroLocal(process.env.LOCAL_NUMBER);
