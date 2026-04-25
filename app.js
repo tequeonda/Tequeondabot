@@ -78,7 +78,7 @@ app.post("/webhook", async (req, res) => {
 
 1️⃣ Mercado Pago Delivery 🟡
 2️⃣ Rappi 🟠
-3️⃣ Nuestra web Fu.do 🌐 (preferida, con descuentos 🎁)
+3️⃣ Nuestra web Fu.do 🌐 (⭐Favorito Ahorro 💰✨)
 4️⃣ Que el bot me ayude 🤖`);
         state.step = "menu_inicial";
         break;
@@ -146,10 +146,10 @@ Hacé tu pedido por Rappi aquí 👉 https://rappi.onelink.me/y6GB/30kk2ddt 🟠
 
 Pero no te quedés sin tus tequeños 🧀 Podés:
 
-3️⃣ Pedir por nuestra web Fu.do 🌐 (con descuentos)
+3️⃣ Pedir por nuestra web Fu.do 🌐 (con descuentos💰✨)
 👉 https://menu.fu.do/tequeonda
 
-4️⃣ Que el bot te ayude con el pedido 🤖
+4️⃣ Que el Bot te ayude con el Pedido 🤖
 
 Respondé *3* o *4* para continuar.`);
           state.step = "menu_sin_cobertura";
@@ -235,9 +235,6 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
 🥟 6 Mini Empanadas Surtidas
 🥟 12 Mini Empanadas Surtidas
 
-*— POSTRES —*
-🍰 Torta Tres Leches
-
 ¿Qué querés pedir? Escribilo así:
 *Ej: 1 Mix 12 + 1 Promo 4 Pastelitos (2 carne mechada, 2 de queso)*`);
         state.step = "pedido";
@@ -246,7 +243,7 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
       case "pedido":
         state.pedido = msg.text?.body || text;
         await sendMessage(from,
-          "¿Querés agregar algo más? 🥤🍰\n\nEscribí *no* si no querés nada más.");
+          "¿Querés agregar algo más? Tenemos Maltas, Cocas, RekoBebibas, Nestea y Tortas 3 Leches 🥤🍰\n\nEscribí *no* si no querés nada más.");
         state.step = "extras";
         break;
 
