@@ -75,7 +75,6 @@ const PRECIOS_EXTRAS = [
 function calcularTotal(pedido, extras) {
   let total = 0;
 
-  // Calcular productos del pedido principal
   const textoPedido = pedido.toLowerCase();
   for (const item of PRECIOS) {
     for (const kw of item.keywords) {
@@ -89,7 +88,6 @@ function calcularTotal(pedido, extras) {
     }
   }
 
-  // Calcular extras si los hay
   if (extras && extras !== "Sin extras") {
     const textoExtras = extras.toLowerCase();
     for (const item of PRECIOS_EXTRAS) {
@@ -200,6 +198,7 @@ ${horarioTexto()}
 2️⃣ Rappi 🟠
 3️⃣ Nuestra web Fu.do 🌐 (⭐Favorito Ahorro 💰✨)
 4️⃣ Que el bot me ayude 🤖
+5️⃣ Hablar con una persona 👤
 
 _En cualquier momento escribí *cancelar* para empezar de nuevo._`);
         state.step = "menu_inicial";
@@ -265,9 +264,18 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
 
 ¡Empecemos! ¿Cuál es tu nombre? 👤`);
           state.step = "nombre";
+        } else if (text.includes("5")) {
+          await sendMessage(from,
+`¡Por supuesto! 😊 Podés contactarnos directamente:
+
+💬 WhatsApp: https://wa.me/5491157048535
+📞 Teléfono: +54 11 5704-8535
+
+¡Un miembro de nuestro equipo te va a atender! 🇻🇪🧀`);
+          state.step = "fin";
         } else {
           await sendMessage(from,
-            "Por favor respondé con *1*, *2*, *3* o *4* 😊");
+            "Por favor respondé con *1*, *2*, *3*, *4* o *5* 😊");
         }
         break;
 
