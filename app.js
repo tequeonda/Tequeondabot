@@ -11,15 +11,33 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
 // =====================
 // HORARIOS DE ATENCIÓN
+// Lun a Mié: 11:00 a 23:00
+// Jue a Sáb: 11:00 a 24:00
+// Dom: 15:00 a 23:00
 // =====================
 function estaAbierto() {
   const ahora = new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" });
   const fecha = new Date(ahora);
+  const dia = fecha.getDay(); // 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
   const hora = fecha.getHours();
   const minutos = fecha.getMinutes();
   const horaDecimal = hora + minutos / 60;
-  // Abierto de 10:30 a 23:00
-  return horaDecimal >= 10.5 && horaDecimal < 23;
+
+  if (dia >= 1 && dia <= 3) {
+    return horaDecimal >= 11 && horaDecimal < 23;
+  } else if (dia >= 4 && dia <= 6) {
+    return horaDecimal >= 11 && horaDecimal < 24;
+  } else if (dia === 0) {
+    return horaDecimal >= 15 && horaDecimal < 23;
+  }
+  return false;
+}
+
+function horarioTexto() {
+  return `⏰ *Nuestros horarios:*
+• Lunes a Miércoles: 11:00 a 23:00 hs
+• Jueves a Sábado: 11:00 a 24:00 hs
+• Domingo: 15:00 a 23:00 hs`;
 }
 
 // =====================
@@ -136,10 +154,13 @@ app.post("/webhook", async (req, res) => {
           await sendMessage(from,
 `😔 En este momento estamos cerrados.
 
-⏰ Nuestro horario de atención es:
-*Lunes a Domingo de 10:30 a 23:00 hs*
+${horarioTexto()}
 
-¡Escribinos cuando abramos y con gusto te atendemos! 🇻🇪🧀`);
+¿Querés dejarnos tu pedido programado para cuando abramos? 🕐
+
+1️⃣ Sí, quiero programar mi pedido
+2️⃣ No, gracias`);
+          state.step = "cerrado_opcion";
           return res.sendStatus(200);
         }
         await sendMessage(from,
@@ -154,6 +175,35 @@ app.post("/webhook", async (req, res) => {
 
 _En cualquier momento escribí *cancelar* para empezar de nuevo._`);
         state.step = "menu_inicial";
+        break;
+
+      case "cerrado_opcion":
+        if (text.includes("1")) {
+          state.pedidoProgramado = true;
+          await sendMessage(from,
+`¡Genial! 🕐 Tomamos tu pedido ahora y lo procesamos cuando abramos.
+
+Para poder crearlo por vos, voy a necesitarte algunos datos:
+📝 Nombre
+📧 Correo electrónico
+📱 Teléfono de contacto
+💳 Forma de pago
+🛒 Lo que querés pedir
+
+¡Empecemos! ¿Cuál es tu nombre? 👤`);
+          state.step = "nombre";
+        } else if (text.includes("2")) {
+          await sendMessage(from,
+`¡Está bien! 😊 Cuando abramos podés escribirnos nuevamente.
+
+${horarioTexto()}
+
+¡Hasta pronto! 🇻🇪🧀`);
+          state.step = "fin";
+        } else {
+          await sendMessage(from,
+            "Por favor respondé con *1* o *2* 😊");
+        }
         break;
 
       case "menu_inicial":
@@ -371,9 +421,13 @@ async function confirmarYEnviarPedido(from, state) {
     ? `\n💰 *Total aprox:* $${total.toLocaleString("es-AR")}\n_(No incluye costo de envío. El total final se confirma con el pedido)_`
     : "";
 
+  const programadoTexto = state.pedidoProgramado
+    ? "\n🕐 *Pedido programado — se procesa cuando abramos*"
+    : "";
+
   await sendMessage(from,
 `✅ *Resumen de tu pedido:*
-
+${programadoTexto}
 👤 Nombre: ${state.nombre}
 🛒 Pedido: ${state.pedido}
 ➕ Extras: ${state.extras}
@@ -382,13 +436,15 @@ async function confirmarYEnviarPedido(from, state) {
 ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
 ${totalTexto}
 
-¡En breve te confirmamos y cotizamos el envío si corresponde! Gracias por elegirnos 🇻🇪🧀`);
+${state.pedidoProgramado
+  ? "¡Tu pedido quedó registrado! Te confirmamos cuando abramos 🕐🇻🇪🧀"
+  : "¡En breve te confirmamos y cotizamos el envío si corresponde! Gracias por elegirnos 🇻🇪🧀"}`);
 
   try {
     const localNum = formatearNumeroLocal(process.env.LOCAL_NUMBER);
     console.log(`📲 Enviando pedido al local: ${localNum}`);
     await sendMessage(localNum,
-`🔥 *NUEVO PEDIDO BOT* 🔥
+`${state.pedidoProgramado ? "🕐 *PEDIDO PROGRAMADO — FUERA DE HORARIO*" : "🔥 *NUEVO PEDIDO BOT* 🔥"}
 
 👤 Cliente: ${state.nombre}
 📱 WhatsApp: ${from}
@@ -402,7 +458,7 @@ ${totalTexto}
 ${state.direccion ? `📍 Dirección: ${state.direccion}` : ""}
 💰 Total aprox: $${total.toLocaleString("es-AR")}
 
-⏰ ${new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`);
+⏰ Recibido: ${new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}`);
   } catch (e) {
     console.log("⚠️ No se pudo notificar al local:", e.message);
   }
