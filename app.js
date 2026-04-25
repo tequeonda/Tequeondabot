@@ -197,7 +197,7 @@ ${horarioTexto()}
 1️⃣ Mercado Pago Delivery 🟡
 2️⃣ Rappi 🟠
 3️⃣ Nuestra web Fu.do 🌐 (⭐Favorito Ahorro 💰✨)
-4️⃣ Que el bot me ayude 🤖
+4️⃣ Armar mi pedido paso a paso con el bot 🤖
 5️⃣ Hablar con una persona 👤
 
 _En cualquier momento escribí *cancelar* para empezar de nuevo._`);
@@ -210,14 +210,9 @@ _En cualquier momento escribí *cancelar* para empezar de nuevo._`);
           await sendMessage(from,
 `¡Genial! 🕐 Tomamos tu pedido ahora y lo procesamos cuando abramos.
 
-Para poder crearlo por vos, voy a necesitarte algunos datos:
-📝 Nombre
-📧 Correo electrónico
-📱 Teléfono de contacto
-💳 Forma de pago
-🛒 Lo que querés pedir
+Te voy a ir pidiendo los datos de a uno por vez, así es más fácil 😊
 
-¡Empecemos! ¿Cuál es tu nombre? 👤`);
+¡Empecemos! ¿Cuál es tu *nombre*? 👤`);
           state.step = "nombre";
         } else if (text.includes("2")) {
           await sendMessage(from,
@@ -255,14 +250,11 @@ Hacé tu pedido aquí 👉 https://menu.fu.do/tequeonda 🌐
           await sendMessage(from,
 `¡Genial! 🤖 Voy a ayudarte a armar tu pedido paso a paso.
 
-Para poder crearlo por vos, voy a necesitarte algunos datos:
-📝 Nombre
-📧 Correo electrónico
-📱 Teléfono de contacto
-💳 Forma de pago
-🛒 Lo que querés pedir
+Te voy a ir pidiendo los datos de a uno por vez, así es más fácil 😊
 
-¡Empecemos! ¿Cuál es tu nombre? 👤`);
+Respondé cada pregunta con un solo dato a la vez.
+
+¡Empecemos! ¿Cuál es tu *nombre*? 👤`);
           state.step = "nombre";
         } else if (text.includes("5")) {
           await sendMessage(from,
@@ -307,7 +299,7 @@ Pero no te quedés sin tus tequeños 🧀 Podés:
 3️⃣ Pedir por nuestra web Fu.do 🌐 (con descuentos 💰✨)
 👉 https://menu.fu.do/tequeonda
 
-4️⃣ Que el Bot te ayude con el Pedido 🤖
+4️⃣ Armar tu pedido paso a paso con el bot 🤖
 
 Respondé *3* o *4* para continuar.`);
           state.step = "menu_sin_cobertura";
@@ -325,14 +317,11 @@ Respondé *3* o *4* para continuar.`);
           await sendMessage(from,
 `¡Genial! 🤖 Voy a ayudarte a armar tu pedido paso a paso.
 
-Para poder crearlo por vos, voy a necesitarte algunos datos:
-📝 Nombre
-📧 Correo electrónico
-📱 Teléfono de contacto
-💳 Forma de pago
-🛒 Lo que querés pedir
+Te voy a ir pidiendo los datos de a uno por vez, así es más fácil 😊
 
-¡Empecemos! ¿Cuál es tu nombre? 👤`);
+Respondé cada pregunta con un solo dato a la vez.
+
+¡Empecemos! ¿Cuál es tu *nombre*? 👤`);
           state.step = "nombre";
         } else {
           await sendMessage(from, "Por favor respondé con *3* o *4* 😊");
@@ -342,13 +331,13 @@ Para poder crearlo por vos, voy a necesitarte algunos datos:
       case "nombre":
         state.nombre = msg.text?.body || text;
         await sendMessage(from,
-          `Gracias ${state.nombre} 😊\n\nIngresá tu correo electrónico 📧`);
+          `Gracias ${state.nombre} 😊\n\n¿Cuál es tu *correo electrónico*? 📧`);
         state.step = "email";
         break;
 
       case "email":
         state.email = text;
-        await sendMessage(from, "Gracias ✅ Ahora ingresá tu número de teléfono 📱");
+        await sendMessage(from, "Perfecto ✅\n\n¿Cuál es tu *número de teléfono*? 📱");
         state.step = "telefono";
         break;
 
