@@ -55,6 +55,7 @@ const PRECIOS = [
   { keywords: ["empanada pabellon", "empanada de pabellon", "empanada pabellón"], precio: 5500 },
   { keywords: ["torta tres leches", "torta 3 leches"], precio: 5000 },
   { keywords: ["tequeyoyo", "teque yoyo"], precio: 3000 },
+  { keywords: ["promo 6 tequeños", "6 teque", "promo 6 teque"], precio: 8500 },
 ];
 
 // =====================
@@ -351,41 +352,24 @@ Respondé cada pregunta con un solo dato a la vez.
       case "pago":
         state.pago = text.includes("1") ? "Efectivo" : "Transferencia / Mercado Pago";
         await sendMessage(from,
-`Nuestros productos 🔥
+`Nuestros más pedidos 🔥
 
-*— INDIVIDUALES —*
-🥟 Empanada Grande de Pabellón (250g) — $5.500
-🧀 Tequeyoyo x unidad — $3.000
-
-*— PROMOS CHICAS —*
-🎉 Mix 5 (3 empanadas + 2 pastelitos + gaseosa) — $12.800
 🥟 Promo 4 Pastelitos + 1 Bebida — $8.500
-   ↳ Elegís 2 salados: carne mechada, carne molida o pollo
-   ↳ Elegís 2 con queso: queso, papa y queso, jamón y queso o pizza
-🥟 Promo 6 Pastelitos + 2 Bebidas — $14.500
-   ↳ Elegís 4 salados: carne mechada, carne molida o pollo
-   ↳ Elegís 2 con queso: queso, papa y queso, jamón y queso o pizza
-
-*— PROMOS CLÁSICAS —*
-🧀 6 Tequeños de Queso — $7.500
+   ↳ 2 salados (carne mechada, molida o pollo)
+   ↳ 2 con queso (queso, papa y queso, jamón y queso o pizza)
+🧀 Promo 6 Tequeños + 1 Bebida — $8.500
+🥟 6 Mini Empanadas Surtidas — $14.500
 🧀 12 Tequeños de Queso — $15.000
-🧀 24 Tequeños de Queso — $27.500
 🎉 25 Tequeños Fiesteros — $16.500
 🎉 50 Tequeños Fiesteros — $28.500
+🎊 Mix 5 (3 Empanadas + 2 Pastelitos + Bebida 500ml) — $12.800
+🎊 Mix 12 (6 Tequeños + 6 Empanadas Surtidas) — $19.500
+🎊 Mix 24 (12 Tequeños + 12 Empanadas Surtidas) — $34.900
 
-*— MIX —*
-🎊 Mix 12 (6 tequeños + 6 empanadas) — $19.500 — ideal 2 a 3 personas
-🎊 Mix 24 (12 tequeños + 12 empanadas) — $34.900 — ideal 4 a 5 personas
-
-*— EMPANADAS —*
-🥟 6 Mini Empanadas Surtidas — $14.500
-🥟 12 Mini Empanadas Surtidas — $26.500
-
-*— POSTRES —*
-🍰 Torta Tres Leches — $5.000
+👉 Ver menú completo: http://menu.fu.do/tequeonda
 
 ¿Qué querés pedir? Escribilo así:
-*Ej: 1 Mix 12 + 1 Promo 4 Pastelitos (2 carne mechada, 2 de queso)*`);
+*Ej: 1 Mix 12 + 1 Promo 6 Tequeños*`);
         state.step = "pedido";
         break;
 
