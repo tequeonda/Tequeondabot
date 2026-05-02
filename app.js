@@ -176,6 +176,9 @@ app.post("/webhook", async (req, res) => {
 
     switch (state.step) {
 
+      // ─────────────────────────────────────────
+      // INICIO
+      // ─────────────────────────────────────────
       case "inicio":
         if (!estaAbierto()) {
           await sendMessage(from,
@@ -190,21 +193,26 @@ ${horarioTexto()}
           state.step = "cerrado_opcion";
           return res.sendStatus(200);
         }
+
+        // ── NUEVO MENÚ PRINCIPAL ──────────────────
         await sendMessage(from,
-`👋 ¡Bienvenido a Teque Onda! 🇻🇪🧀
+`👋 ¡Bienvenido/a a *Teque Onda*! 🇻🇪🧀
 
-¿Cómo querés recibir tu pedido?
+¿Qué querés hacer?
 
-1️⃣ Mercado Pago Delivery 🟡
-2️⃣ Rappi 🟠
-3️⃣ Nuestra web Fu.do 🌐 (⭐Favorito Ahorro 💰✨)
-4️⃣ Armar mi pedido paso a paso con el bot 🤖
-5️⃣ Hablar con una persona 👤
+1️⃣ 📋 Ver Menú & Precios
+2️⃣ 🛵 Pedir por App Delivery
+3️⃣ 🏪 Armar pedido paso a paso con el bot 🤖
+4️⃣ 📍 Horarios y ubicación
+5️⃣ 💬 Hablar con nosotros
 
 _En cualquier momento escribí *cancelar* para empezar de nuevo._`);
-        state.step = "menu_inicial";
+        state.step = "menu_principal";
         break;
 
+      // ─────────────────────────────────────────
+      // FUERA DE HORARIO
+      // ─────────────────────────────────────────
       case "cerrado_opcion":
         if (text.includes("1")) {
           state.pedidoProgramado = true;
@@ -228,26 +236,36 @@ ${horarioTexto()}
         }
         break;
 
-      case "menu_inicial":
+      // ─────────────────────────────────────────
+      // MENÚ PRINCIPAL (nuevo flujo)
+      // ─────────────────────────────────────────
+      case "menu_principal":
+
         if (text.includes("1")) {
-          state.canal = "mercadopago";
+          // Ver Menú & Precios → enlace directo
           await sendMessage(from,
-            "¿En qué barrio estás? 📍\n\nEscribilo así: *Ej: Palermo, Villa Crespo, Chacarita...*");
-          state.step = "cobertura";
-        } else if (text.includes("2")) {
-          state.canal = "rappi";
-          await sendMessage(from,
-            "¿En qué barrio estás? 📍\n\nEscribilo así: *Ej: Palermo, Villa Crespo, Chacarita...*");
-          state.step = "cobertura";
-        } else if (text.includes("3")) {
-          await sendMessage(from,
-`¡Genial! 🎁 En nuestra web encontrás descuentos exclusivos para clientes cercanos.
+`📋 *Menú & Precios de Teque Onda*
 
-Hacé tu pedido aquí 👉 https://menu.fu.do/tequeonda 🌐
+Acá encontrás todo nuestro menú con precios actualizados 👇
+👉 https://menu.fu.do/tequeonda
 
-¡Gracias por elegirnos! 🇻🇪🧀`);
+¿Necesitás algo más? Escribí *0* para volver al menú principal. 😊`);
           state.step = "fin";
-        } else if (text.includes("4")) {
+
+        } else if (text.includes("2")) {
+          // App Delivery → sub-menú
+          await sendMessage(from,
+`🛵 *Pedir por App Delivery*
+
+¿Por cuál app preferís pedir?
+
+1️⃣ 🟠 Rappi
+2️⃣ 🔵 Mercado Pago Delivery
+0️⃣ 🔙 Volver al menú principal`);
+          state.step = "menu_delivery";
+
+        } else if (text.includes("3")) {
+          // Armar pedido con el bot
           await sendMessage(from,
 `¡Genial! 🤖 Voy a ayudarte a armar tu pedido paso a paso.
 
@@ -257,21 +275,84 @@ Respondé cada pregunta con un solo dato a la vez.
 
 ¡Empecemos! ¿Cuál es tu *nombre*? 👤`);
           state.step = "nombre";
-        } else if (text.includes("5")) {
-          await sendMessage(from,
-`¡Por supuesto! 😊 Podés contactarnos directamente:
 
-💬 WhatsApp: https://wa.me/5491157048535
+        } else if (text.includes("4")) {
+          // Horarios y ubicación
+          await sendMessage(from,
+`📍 *Ubicación y Horarios*
+
+🏠 Bonpland 1708, Palermo, CABA
+${horarioTexto()}
+
+📞 Teléfono: +54 11 5704-8535
+
+👉 Ver en el mapa: https://maps.app.goo.gl/XcVG47yetwhecH3p9
+
+Escribí *0* para volver al menú principal.`);
+          state.step = "fin";
+
+        } else if (text.includes("5")) {
+          // Hablar con una persona
+          await sendMessage(from,
+`💬 ¡Por supuesto! 😊 Podés contactarnos directamente:
+
+WhatsApp: https://wa.me/5491157048535
 📞 Teléfono: +54 11 5704-8535
 
 ¡Un miembro de nuestro equipo te va a atender! 🇻🇪🧀`);
           state.step = "fin";
+
         } else {
           await sendMessage(from,
-            "Por favor respondé con *1*, *2*, *3*, *4* o *5* 😊");
+            "Por favor respondé con un número del *1 al 5* 😊");
         }
         break;
 
+      // ─────────────────────────────────────────
+      // SUB-MENÚ DELIVERY (Rappi / Mercado Pago)
+      // ─────────────────────────────────────────
+      case "menu_delivery":
+
+        if (text.includes("1")) {
+          // Rappi → preguntar barrio para verificar cobertura
+          state.canal = "rappi";
+          await sendMessage(from,
+            "¿En qué barrio estás? 📍\n\nEscribilo así: *Ej: Palermo, Villa Crespo, Chacarita...*");
+          state.step = "cobertura";
+
+        } else if (text.includes("2")) {
+          // Mercado Pago Delivery → preguntar barrio
+          state.canal = "mercadopago";
+          await sendMessage(from,
+            "¿En qué barrio estás? 📍\n\nEscribilo así: *Ej: Palermo, Villa Crespo, Chacarita...*");
+          state.step = "cobertura";
+
+        } else if (text === "0") {
+          // Volver al menú principal
+          userState[from] = { step: "inicio" };
+          await sendMessage(from,
+`👋 ¡Bienvenido/a a *Teque Onda*! 🇻🇪🧀
+
+¿Qué querés hacer?
+
+1️⃣ 📋 Ver Menú & Precios
+2️⃣ 🛵 Pedir por App Delivery
+3️⃣ 🏪 Armar pedido paso a paso con el bot 🤖
+4️⃣ 📍 Horarios y ubicación
+5️⃣ 💬 Hablar con nosotros
+
+_En cualquier momento escribí *cancelar* para empezar de nuevo._`);
+          userState[from].step = "menu_principal";
+
+        } else {
+          await sendMessage(from,
+            "Por favor respondé con *1* (Rappi), *2* (Mercado Pago Delivery) o *0* para volver 😊");
+        }
+        break;
+
+      // ─────────────────────────────────────────
+      // COBERTURA DE ZONA
+      // ─────────────────────────────────────────
       case "cobertura":
         const barrio = msg.text?.body || text;
         if (tieneCobertura(barrio)) {
@@ -279,7 +360,7 @@ Respondé cada pregunta con un solo dato a la vez.
             await sendMessage(from,
 `✅ ¡Genial, llegamos a tu barrio!
 
-Hacé tu pedido por Mercado Pago Delivery aquí 👉 https://mpago.li/2Vcwjkc 🟡
+Hacé tu pedido por Mercado Pago Delivery aquí 👉 https://mpago.li/2Vcwjkc 🔵
 
 ¡Gracias por elegirnos! 🇻🇪🧀`);
           } else {
@@ -297,24 +378,24 @@ Hacé tu pedido por Rappi aquí 👉 https://rappi.onelink.me/y6GB/30kk2ddt 🟠
 
 Pero no te quedés sin tus tequeños 🧀 Podés:
 
-3️⃣ Pedir por nuestra web Fu.do 🌐 (con descuentos 💰✨)
-👉 https://menu.fu.do/tequeonda
+1️⃣ 📋 Ver el menú en nuestra web (con descuentos 💰✨)
+   👉 https://menu.fu.do/tequeonda
 
-4️⃣ Armar tu pedido paso a paso con el bot 🤖
+2️⃣ 🤖 Armar tu pedido paso a paso con el bot
 
-Respondé *3* o *4* para continuar.`);
+Respondé *1* o *2* para continuar.`);
           state.step = "menu_sin_cobertura";
         }
         break;
 
       case "menu_sin_cobertura":
-        if (text.includes("3")) {
+        if (text.includes("1")) {
           await sendMessage(from,
 `¡Genial! 🎁 Hacé tu pedido aquí 👉 https://menu.fu.do/tequeonda 🌐
 
 ¡Gracias por elegirnos! 🇻🇪🧀`);
           state.step = "fin";
-        } else if (text.includes("4")) {
+        } else if (text.includes("2")) {
           await sendMessage(from,
 `¡Genial! 🤖 Voy a ayudarte a armar tu pedido paso a paso.
 
@@ -325,10 +406,13 @@ Respondé cada pregunta con un solo dato a la vez.
 ¡Empecemos! ¿Cuál es tu *nombre*? 👤`);
           state.step = "nombre";
         } else {
-          await sendMessage(from, "Por favor respondé con *3* o *4* 😊");
+          await sendMessage(from, "Por favor respondé con *1* o *2* 😊");
         }
         break;
 
+      // ─────────────────────────────────────────
+      // FLUJO DE PEDIDO PASO A PASO
+      // ─────────────────────────────────────────
       case "nombre":
         state.nombre = msg.text?.body || text;
         await sendMessage(from,
